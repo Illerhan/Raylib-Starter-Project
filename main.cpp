@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include <complex.h>
 #include <fstream>
 
 using namespace std;
@@ -197,109 +198,109 @@ void printGridWithPath(const std::vector<std::vector<Node>>& grid, const std::ve
     }
 }
 
-bool startSelected = false;
-bool endSelected = false;
+bool haveStart = false;
+bool haveEnd = false;
 
 int main() {
 
-    
-    cout << "Hello World" << endl;
 
     InitWindow(1080, 920, "AStar");
     SetTargetFPS(60);
 
-    while (!WindowShouldClose()) {
-        BeginDrawing();
-        ClearBackground(BLACK);
+    std::vector<std::vector<Node>> grid(rows, std::vector<Node>(cols));
 
-        
-        std::vector<std::vector<Node>> grid(rows, std::vector<Node>(cols));
-
-        // Initialize grid with nodes and set obstacles
-        for (int i = 0; i < rows; ++i)
+    // Initialize grid with nodes and set obstacles
+    for (int i = 0; i < rows; ++i)
+    {
+        for (int j = 0; j < cols; ++j)
         {
-            for (int j = 0; j < cols; ++j)
+            grid[i][j].x = i;
+            grid[i][j].y = j;
+            grid[i][j].parent = nullptr;
+
+            // Assign terrain types
+            if (grid[i][j].obstacle)
             {
-                grid[i][j].x = i;
-                grid[i][j].y = j;
-                grid[i][j].parent = nullptr;
-
-                // Assign terrain types
-                if (grid[i][j].obstacle)
-                {
-                    grid[i][j].terrain = Obstacle;
-                }
-                else
-                {
-                    grid[i][j].terrain = Normal;
-                }
-                grid[i][j].terrainCostMultiplier = getTerrainCost(grid[i][j]);
-            }
-        }
-       
-
-        while(!startSelected && !endSelected)
-        {
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !startSelected)
-            {
-                Vector2 startPosition = {50 * GetMousePosition().x , GetMousePosition().y + 50};
-            }
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && startSelected && !endSelected)
-            {
-                Vector2 endPosition = {50 * GetMousePosition().x , GetMousePosition().y + 50};
-            }
-        }
-
-        
-        Node* start = grid[0].data(); // Set start node
-        const Node* goal = &grid[rows - 1][cols - 1];  // Set goal node
-
-        // Set Nodes
-        grid[1][6].obstacle = true;
-        grid[1][8].obstacle = true;
-
-        grid[2][0].obstacle = true;
-        grid[2][1].obstacle = true;
-        grid[2][2].obstacle = true;
-        grid[2][5].obstacle = true;
-
-        grid[6][6].obstacle = true;
-        grid[6][7].obstacle = true;
-        grid[6][9].obstacle = true;
-
-        grid[8][5].obstacle = true;
-        grid[8][6].obstacle = true;
-        grid[8][8].obstacle = true;
-
-        grid[5][5].terrain = Sand;
-        grid[6][0].terrain = Sand;
-        grid[6][1].terrain = Sand;
-        grid[6][3].terrain = Sand;
-        grid[5][3].terrain = Rocky;
-        grid[8][2].terrain = Rocky;
-        grid[8][9].terrain = Rocky;
-
-        if(startSelected && endSelected)
-        {
-            // Call A* algorithm
-            const std::vector<Node*> path = astar(start, goal, grid);
-
-            // Print the path
-            if (!path.empty())
-            {
-                std::cout << "Path found :\n";
-                for (const auto& node : path)
-                {
-                    std::cout << getTerrainCost(*node) << " -> ";
-                    std::cout << "(" << node->x << ", " << node->y << ") | ";
-                }
-                std::cout << '\n';
-                printGridWithPath(grid, path);
+                grid[i][j].terrain = Obstacle;
             }
             else
             {
-                printGridWithPath(grid, path);
+                grid[i][j].terrain = Normal;
             }
+            grid[i][j].terrainCostMultiplier = getTerrainCost(grid[i][j]);
+        }
+    }
+        
+    Node* start = grid[0].data(); // Set start node
+    const Node* goal = &grid[rows - 1][cols - 1];  // Set goal node
+        
+        
+    // Set Nodes
+    grid[1][6].obstacle = true;
+    grid[1][8].obstacle = true;
+
+    grid[2][0].obstacle = true;
+    grid[2][1].obstacle = true;
+    grid[2][2].obstacle = true;
+    grid[2][5].obstacle = true;
+
+    grid[6][6].obstacle = true;
+    grid[6][7].obstacle = true;
+    grid[6][9].obstacle = true;
+
+    grid[8][5].obstacle = true;
+    grid[8][6].obstacle = true;
+    grid[8][8].obstacle = true;
+
+    grid[5][5].terrain = Sand;
+    grid[6][0].terrain = Sand;
+    grid[6][1].terrain = Sand;
+    grid[6][3].terrain = Sand;
+    grid[5][3].terrain = Rocky;
+    grid[8][2].terrain = Rocky;
+    grid[8][9].terrain = Rocky;
+
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground(BLACK);
+        
+        if(!haveStart) haveStart = false;
+        if(!haveEnd) haveEnd = false;
+
+        if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        {
+            const Vector2 mousePos = GetMousePosition();
+
+            const int mouseX = static_cast<int>(mousePos.x) / 50;
+            const int mouseY = static_cast<int>(mousePos.y) / 50;
+
+            if ( mouseX >= 0 && mouseX < rows && mouseY >= 0 && mouseY < cols )
+            {
+                if (!haveStart)
+                {
+                    start = &grid[mouseX][mouseY];
+                    haveStart = true;
+                }
+                else if (!haveEnd && &grid[mouseX][mouseY] != start)
+                {
+                    goal = &grid[mouseX][mouseY];
+                    haveEnd = true;
+                }
+            }
+        }
+
+        printGridWithPath(grid, {});
+        
+        if (haveStart && haveEnd)
+            {
+            const std::vector<Node*> path = astar(start, goal, grid);
+
+            printGridWithPath(grid, path);
+
+            if (start != nullptr) DrawRectangle(start->x * 50, start->y * 50, 50 - 2, 50 - 2, PURPLE);
+
+            if (goal != nullptr) DrawRectangle(goal->x * 50, goal->y * 50, 50 - 2, 50 - 2, PINK);
+
         }
         EndDrawing();
     }
